@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">test_model_HAR</string>
+    <string name="textview">TextView</string>
+</resources>
