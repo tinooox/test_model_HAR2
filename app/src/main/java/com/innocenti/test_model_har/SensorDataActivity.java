@@ -1,11 +1,13 @@
 package com.innocenti.test_model_har;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -13,17 +15,22 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class SensorDataActivity extends AppCompatActivity implements SensorEventListener {
+    float[] a = new float[1000];
+    int i = 0;
 
     private static final String TAG = "SensorDataActivity";
     private SensorManager sensorManager;
-    Sensor attitude, gravity;
+    Sensor attitude, gravity, acceleration, rotationRate;
     Button buttonStart, buttonStop;
 
     TextView attitudeX, attitudeY, attitudeZ;
     TextView gravityX, gravityY, gravityZ;
+    TextView accelerationX, accelerationY, accelerationZ;
+    TextView rotationRateX,rotationRateY,rotationRateZ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +47,15 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         gravityX = (TextView) findViewById(R.id.gravityX);
         gravityY = (TextView) findViewById(R.id.gravityY);
         gravityZ = (TextView) findViewById(R.id.gravityZ);
+
+        accelerationX = (TextView) findViewById(R.id.accelerationX);
+        accelerationY = (TextView) findViewById(R.id.accelerationY);
+        accelerationZ = (TextView) findViewById(R.id.accelerationZ);
+
+        rotationRateX = (TextView) findViewById(R.id.rotationRateX);
+        rotationRateY= (TextView) findViewById(R.id.rotationRateY);
+        rotationRateZ = (TextView) findViewById(R.id.rotationRateZ);
+
         //start();
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
@@ -51,12 +67,14 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         buttonStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Log.d(TAG, "prova " + a[1] );
                 onPause();
 
             }
         });
 
         buttonStart.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
             @Override
             public void onClick(View view) {
                 onResume();
@@ -71,6 +89,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         sensorManager.unregisterListener(this);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     @Override
     protected void onResume() {
         super.onResume();
@@ -78,9 +97,10 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     }
 
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
+        //Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
         attitudeX.setText("X: "+ sensorEvent.values[0]);
         attitudeY.setText("Y: "+ sensorEvent.values[1]);
         attitudeZ.setText("Z: "+ sensorEvent.values[2]);
@@ -88,8 +108,20 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
 
 
         gravityX.setText("X: " + sensorEvent.values[0]);
-        gravityY.setText("Y: " + sensorEvent.values[0]);
-        gravityZ.setText("Z: " + sensorEvent.values[0]);
+        gravityY.setText("Y: " + sensorEvent.values[1]);
+        gravityZ.setText("Z: " + sensorEvent.values[2]);
+
+        accelerationX.setText("X: "+ sensorEvent.values[0]);
+        accelerationY.setText("Y: "+ sensorEvent.values[1]);
+        accelerationZ.setText("Z: "+ sensorEvent.values[2]);
+
+        rotationRateX.setText("X: "+ sensorEvent.values[0]);
+        rotationRateY.setText("Y: "+ sensorEvent.values[1]);
+        rotationRateZ.setText("Z: "+ sensorEvent.values[2]);
+        a[i] = sensorEvent.values[0];
+        i++;
+
+
     }
 
     @Override
@@ -97,11 +129,16 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void start(){
         sensorManager.registerListener(this, attitude, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener( this, gravity, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener( this, acceleration, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener( this, rotationRate, SensorManager.SENSOR_DELAY_NORMAL);
         gravity =  sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         attitude = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
+        acceleration = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        rotationRate = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
 
     }
 
