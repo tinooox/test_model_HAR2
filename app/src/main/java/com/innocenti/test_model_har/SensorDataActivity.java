@@ -19,7 +19,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class SensorDataActivity extends AppCompatActivity implements SensorEventListener {
-    float[] a = new float[1000];
+    float[][] a = new float[12][300];
     int i = 0;
 
     private static final String TAG = "SensorDataActivity";
@@ -67,7 +67,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         buttonStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(TAG, "prova " + a[1] );
+                Log.d(TAG, "prova " + a[1][2] );
                 onPause();
 
             }
@@ -100,26 +100,49 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     @SuppressLint("SetTextI18n")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+        Sensor sensor = sensorEvent.sensor;
         //Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
-        attitudeX.setText("X: "+ sensorEvent.values[0]);
-        attitudeY.setText("Y: "+ sensorEvent.values[1]);
-        attitudeZ.setText("Z: "+ sensorEvent.values[2]);
+        if(sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR){
+            attitudeX.setText("X: "+ sensorEvent.values[0]);
+            attitudeY.setText("Y: "+ sensorEvent.values[1]);
+            attitudeZ.setText("Z: "+ sensorEvent.values[2]);
+            a[0][i] = sensorEvent.values[0];
+            a[1][i] = sensorEvent.values[1];
+            a[2][i] = sensorEvent.values[2];
+        }
+        if(sensor.getType() == Sensor.TYPE_GRAVITY){
+            gravityX.setText("X: " + sensorEvent.values[0]);
+            gravityY.setText("Y: " + sensorEvent.values[1]);
+            gravityZ.setText("Z: " + sensorEvent.values[2]);
+            a[3][i] = sensorEvent.values[0];
+            a[4][i] = sensorEvent.values[1];
+            a[5][i] = sensorEvent.values[2];
+        }
+        if(sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
+            accelerationX.setText("X: "+ sensorEvent.values[0]);
+            accelerationY.setText("Y: "+ sensorEvent.values[1]);
+            accelerationZ.setText("Z: "+ sensorEvent.values[2]);
+            a[6][i] = sensorEvent.values[0];
+            a[7][i] = sensorEvent.values[1];
+            a[8][i] = sensorEvent.values[2];
+        }
 
-
-
-        gravityX.setText("X: " + sensorEvent.values[0]);
-        gravityY.setText("Y: " + sensorEvent.values[1]);
-        gravityZ.setText("Z: " + sensorEvent.values[2]);
-
-        accelerationX.setText("X: "+ sensorEvent.values[0]);
-        accelerationY.setText("Y: "+ sensorEvent.values[1]);
-        accelerationZ.setText("Z: "+ sensorEvent.values[2]);
-
-        rotationRateX.setText("X: "+ sensorEvent.values[0]);
-        rotationRateY.setText("Y: "+ sensorEvent.values[1]);
-        rotationRateZ.setText("Z: "+ sensorEvent.values[2]);
-        a[i] = sensorEvent.values[0];
+        if(sensor.getType() == Sensor.TYPE_GYROSCOPE_UNCALIBRATED){
+            rotationRateX.setText("X: "+ sensorEvent.values[0]);
+            rotationRateY.setText("Y: "+ sensorEvent.values[1]);
+            rotationRateZ.setText("Z: "+ sensorEvent.values[2]);
+            a[9][i] = sensorEvent.values[0];
+            a[10][i] = sensorEvent.values[1];
+            a[11][i] = sensorEvent.values[2];
+        }
         i++;
+
+        if (i == 300) {
+            Log.d(TAG, "onSensorChanged: DATI SALVATI");
+            Log.d(TAG, "onSensorChanged: " + a[0].length + " ");
+            onPause();
+        }
+
 
 
     }
