@@ -2,6 +2,7 @@ package com.innocenti.test_model_har;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -14,6 +15,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,11 +23,11 @@ import androidx.appcompat.app.AppCompatActivity;
 public class SensorDataActivity extends AppCompatActivity implements SensorEventListener {
     float[][] a = new float[12][300];
     int i = 0;
-
+    boolean registered = false;
     private static final String TAG = "SensorDataActivity";
     private SensorManager sensorManager;
     Sensor attitude, gravity, acceleration, rotationRate;
-    Button buttonStart, buttonStop;
+    Button buttonStart, buttonStop, buttonClassifica;
 
     TextView attitudeX, attitudeY, attitudeZ;
     TextView gravityX, gravityY, gravityZ;
@@ -39,6 +41,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
 
         buttonStart = (Button) findViewById(R.id.buttonStart);
         buttonStop = (Button) findViewById(R.id.buttonStop);
+        buttonClassifica = (Button) findViewById(R.id.classifica);
 
         attitudeX = (TextView) findViewById(R.id.attitudeX);
         attitudeY = (TextView) findViewById(R.id.attitudeY);
@@ -81,6 +84,30 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             }
         });
 
+        buttonClassifica.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(registered) {
+                    Log.d(TAG, "onClick: passiamo allactivity tensorflow");
+                    Intent intent = new Intent(SensorDataActivity.this, TensorflowActivity.class);
+                    Bundle bundle = new Bundle();
+                    bundle.putSerializable("value", a);
+                    intent.putExtras(bundle);
+                    startActivity(intent);
+
+                }
+                else{
+
+                    Context context = getApplicationContext();
+                    CharSequence text = "ERRORE, devi prima registrare un attività";
+                    int duration = Toast.LENGTH_SHORT;
+
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                }
+            }
+        });
+
     }
 
     @Override
@@ -97,9 +124,12 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     }
 
 
+
+
     @SuppressLint("SetTextI18n")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+
         Sensor sensor = sensorEvent.sensor;
         //Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
         if(sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR){
@@ -141,6 +171,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             Log.d(TAG, "onSensorChanged: DATI SALVATI");
             Log.d(TAG, "onSensorChanged: " + a[0].length + " ");
             onPause();
+            registered = true;
         }
 
 
