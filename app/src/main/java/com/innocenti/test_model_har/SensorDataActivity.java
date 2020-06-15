@@ -3,6 +3,7 @@ package com.innocenti.test_model_har;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -17,22 +18,35 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.tensorflow.lite.Interpreter;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+import androidx.annotation.LongDef;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class SensorDataActivity extends AppCompatActivity implements SensorEventListener {
-    float[][] a = new float[12][300];
+    float[][][][] a = new float[1][12][50][1];
+    float[][][][] b = new float[1][3][50][1];
+    float[][] out = new float[1][5];
     int i = 0;
+    int j = 0;
     boolean registered = false;
+    Interpreter tflite;
     private static final String TAG = "SensorDataActivity";
     private SensorManager sensorManager;
-    Sensor attitude, gravity, acceleration, rotationRate;
+    Sensor attitude, gravity, acceleration, rotationRate, accelerometer;
     Button buttonStart, buttonStop, buttonClassifica;
 
-    TextView attitudeX, attitudeY, attitudeZ;
+    TextView attitudeX, attitudeY, attitudeZ, result1;
     TextView gravityX, gravityY, gravityZ;
     TextView accelerationX, accelerationY, accelerationZ;
     TextView rotationRateX,rotationRateY,rotationRateZ;
+    TextView counter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,8 +73,18 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         rotationRateY= (TextView) findViewById(R.id.rotationRateY);
         rotationRateZ = (TextView) findViewById(R.id.rotationRateZ);
 
+        result1 = (TextView) findViewById(R.id.result1);
+        counter = (TextView) findViewById(R.id.counter);
         //start();
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        try {
+            tflite = new Interpreter(loadModelFile());
+            Log.d(TAG, "onCreate: modello caricato correttamente");
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d(TAG, "onCreate: modell non caricato");
+        }
 
 
 
@@ -70,7 +94,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         buttonStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(TAG, "prova " + a[1][2] );
+                Log.d(TAG, "hai registrato " + a.length + "secondi" );
                 onPause();
 
             }
@@ -88,6 +112,8 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             @Override
             public void onClick(View view) {
                 if(registered) {
+                    float [][][][] data = createInputData(a);
+
                     Log.d(TAG, "onClick: passiamo allactivity tensorflow");
                     Intent intent = new Intent(SensorDataActivity.this, TensorflowActivity.class);
                     Bundle bundle = new Bundle();
@@ -114,6 +140,7 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(this);
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -129,48 +156,80 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     @SuppressLint("SetTextI18n")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-
+        j++;
+        //counter.setText("a" + j);
         Sensor sensor = sensorEvent.sensor;
+
+
+
         //Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
         if(sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR){
             attitudeX.setText("X: "+ sensorEvent.values[0]);
             attitudeY.setText("Y: "+ sensorEvent.values[1]);
             attitudeZ.setText("Z: "+ sensorEvent.values[2]);
-            a[0][i] = sensorEvent.values[0];
-            a[1][i] = sensorEvent.values[1];
-            a[2][i] = sensorEvent.values[2];
+            a[0][0][i][0] = sensorEvent.values[0];
+            a[0][1][i][0] = sensorEvent.values[1];
+            a[0][2][i][0] = sensorEvent.values[2];
         }
         if(sensor.getType() == Sensor.TYPE_GRAVITY){
-            gravityX.setText("X: " + sensorEvent.values[0]);
-            gravityY.setText("Y: " + sensorEvent.values[1]);
-            gravityZ.setText("Z: " + sensorEvent.values[2]);
-            a[3][i] = sensorEvent.values[0];
-            a[4][i] = sensorEvent.values[1];
-            a[5][i] = sensorEvent.values[2];
+            gravityX.setText("X: " + sensorEvent.values[0]/9.81);
+            gravityY.setText("Y: " + sensorEvent.values[1]/9.81);
+            gravityZ.setText("Z: " + sensorEvent.values[2]/9.81);
+            a[0][3][i][0] = (float) (sensorEvent.values[0]/9.81);
+            a[0][4][i][0] = (float) (sensorEvent.values[0]/9.81);
+            a[0][5][i][0] = (float) (sensorEvent.values[0]/9.81);
         }
         if(sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
-            accelerationX.setText("X: "+ sensorEvent.values[0]);
-            accelerationY.setText("Y: "+ sensorEvent.values[1]);
-            accelerationZ.setText("Z: "+ sensorEvent.values[2]);
-            a[6][i] = sensorEvent.values[0];
-            a[7][i] = sensorEvent.values[1];
-            a[8][i] = sensorEvent.values[2];
+
+            accelerationX.setText("X: " + sensorEvent.values[0]);
+            accelerationY.setText("Y: " + sensorEvent.values[1]);
+            accelerationZ.setText("Z: " + sensorEvent.values[2]);
+
+
+            a[0][6][i][0]= (float) (sensorEvent.values[0]/-9.81);
+            a[0][7][i][0] = (float) (sensorEvent.values[1]/-9.81);
+            a[0][8][i][0] = (float) (sensorEvent.values[2]/-9.81);
+
         }
 
         if(sensor.getType() == Sensor.TYPE_GYROSCOPE_UNCALIBRATED){
             rotationRateX.setText("X: "+ sensorEvent.values[0]);
             rotationRateY.setText("Y: "+ sensorEvent.values[1]);
             rotationRateZ.setText("Z: "+ sensorEvent.values[2]);
-            a[9][i] = sensorEvent.values[0];
-            a[10][i] = sensorEvent.values[1];
-            a[11][i] = sensorEvent.values[2];
+            a[0][9][i][0] = sensorEvent.values[0];
+            a[0][10][i][0] = sensorEvent.values[1];
+            a[0][11][i][0] = sensorEvent.values[2];
         }
+
+
+
+        if(sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+
+            float d1 = (float) (sensorEvent.values[0]/9.81);
+            float d2 = (float) (sensorEvent.values[1]/9.81);
+            float d3 = (float) (sensorEvent.values[2]/9.81);
+            b[0][0][i][0] = d1;
+            b[0][1][i][0] = d2;
+            b[0][2][i][0] = d3;
+
+
+        }
+
+
+
         i++;
 
-        if (i == 300) {
-            Log.d(TAG, "onSensorChanged: DATI SALVATI");
-            Log.d(TAG, "onSensorChanged: " + a[0].length + " ");
-            onPause();
+
+
+        if (i == 50) {
+
+            out = doInference(a);
+            printAct(out);
+
+
+
+            //onPause();
+            i = 0;
             registered = true;
         }
 
@@ -185,15 +244,84 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void start(){
-        sensorManager.registerListener(this, attitude, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener( this, gravity, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener( this, acceleration, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener( this, rotationRate, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, attitude, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener( this, gravity, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener( this, acceleration, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener( this, rotationRate, SensorManager.SENSOR_DELAY_FASTEST);
+
         gravity =  sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         attitude = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
         acceleration = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationRate = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
 
+
+    }
+
+    public float[][][][] createInputData(float[][][][] a){
+        int length = a.length;
+        float[][][][] data = new float[a.length][12][50][1];
+        for(int i = 0; i< a.length; i++){
+            for (int j = 0; j< 12; j++){
+                for (int h = 0; h<50; h++)
+                    data[i][j][h][0] = a[i][j][h][0];
+                }
+            }
+        return data;
+    }
+
+    public float[][] doInference(float[][][][] dati_final) {
+
+        float[][] outputval = new float[1][5];
+        tflite.run(dati_final, outputval);
+        return outputval;
+    }
+
+    private MappedByteBuffer loadModelFile() throws IOException {
+        Log.d(TAG, "loadModelFile: dentro la procedura");
+        AssetFileDescriptor fileDescriptor = this.getAssets().openFd("5_out.tflite");
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        Log.d(TAG, "loadModelFile: fuori la procedura");
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+
+    }
+
+    public void printAct(float[][] prediction){
+        int index = 0;
+        float max = 0;
+        for(int i = 0; i<5; i++){
+            if(prediction[0][i]>max){
+                max = prediction[0][i];
+                index = i;
+            }
+        }
+        switch(index){
+            case 0:
+                result1.setText("DOWNSTAIRS");
+                counter.setText(""+max);
+                break;
+
+            case 1:
+                result1.setText("UPSTAIRS" );
+                counter.setText(""+max);
+                break;
+
+            case 2:
+                result1.setText("WALKING");
+                counter.setText(""+max);
+                break;
+            case 3:
+                result1.setText("JOGGING");
+                counter.setText(""+max);
+                break;
+            case 4:
+                result1.setText("SITTING");
+                counter.setText(""+max);
+                break;
+
+        }
     }
 
 

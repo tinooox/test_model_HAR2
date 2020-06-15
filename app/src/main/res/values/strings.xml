@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">test_model_HAR</string>
     <string name="textview">TextView</string>
+    <string name="probability">probability</string>
+    <string name="downstairs">downstairs</string>
+    <string name="jogging">jogging</string>
+    <string name="sitting">sitting</string>
+    <string name="upstairs">upstairs</string>
+    <string name="walking">walking</string>
+    <string name="activity" translatable="false">activity</string>
 </resources>

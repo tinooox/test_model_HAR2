@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.d(TAG, "onClick: bottone TF cliccato");
-                Intent intent = new Intent(MainActivity.this, TensorflowActivity.class);
+                Intent intent = new Intent(MainActivity.this, RunTimeHar.class);
                 startActivity(intent);
             }
         });

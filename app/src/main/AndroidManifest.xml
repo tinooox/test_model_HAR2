@@ -9,7 +9,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".WekaActivity"></activity>
+        <activity android:name=".RunTimeHar"></activity>
+        <activity android:name=".WekaActivity" />
         <activity android:name=".TensorflowActivity" />
         <activity android:name=".SensorDataActivity" />
         <activity android:name=".MainActivity">

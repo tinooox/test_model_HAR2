@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">test_model_HAR</string>
+    <string name="textview">textview</string>
+    <string name="probability">probabilità</string>
+    <string name="downstairs">scendi</string>
+    <string name="jogging">corsa</string>
+    <string name="sitting">seduto</string>
+    <string name="upstairs">sali</string>
+    <string name="walking">cammini</string>
+</resources>
