@@ -1,18 +1,16 @@
 package com.innocenti.test_model_har;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
-import android.content.res.AssetFileDescriptor;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.hardware.SensorListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -20,24 +18,18 @@ import android.widget.Toast;
 
 import com.opencsv.CSVWriter;
 
-import org.tensorflow.lite.Interpreter;
-
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Calendar;
 
-import androidx.annotation.LongDef;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class SaveSensorDataActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = "SensorDataActivity";
+    private static final int PERMISSION_REQUEST_CODE = 1;
     //variabili per inference
     float[][][][] inputData = new float[1][12][50][1];
     float[][] outputData = new float[1][5];
@@ -48,7 +40,7 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
     CSVWriter writer, writer1;
     String fileName = "";
     String[] firstLine = {"attitude.roll", "attitude.pitch", "attitude.jaw", "gravity.x", "gravity.y", "gravity.z", "userAcc.x", "userAcc.y","userAcc.x", "rotationRate.x", "rotationRate.y", "rotationRate.z"};
-    String[] dataFile = new String[12];
+    String[] dataFile;
     int i = 0;
     //variabili sensori
     private SensorManager sensorManager;
@@ -64,8 +56,9 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         badData = 0;
+        dataFile = new String[12];
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activiry_sensor_data);
+        setContentView(R.layout.activity_sensor_data);
 
         buttonStart = (Button) findViewById(R.id.buttonStart);
         buttonStop = (Button) findViewById(R.id.buttonStop);
@@ -93,6 +86,22 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         classifier = new Classifier(getApplicationContext());
 
+        if (Build.VERSION.SDK_INT >= 23)
+        {
+            if (checkPermission())
+            {
+                
+            } else {
+                requestPermission(); // Code for permission
+            }
+        }
+        else
+        {
+            Log.d(TAG, "onCreate: no permission");
+            onDestroy();
+        }
+
+
 
 
         //gestione start stop con bottone
@@ -109,6 +118,7 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
             @Override
             public void onClick(View view) {
                 onResume();
+
                 fileName = getData();
                 final String data_csv = android.os.Environment.getExternalStorageDirectory().getAbsolutePath()  + "/Test_HAR_data/"  + fileName + "DATA" +".csv";
                 final String prediciton_csv = android.os.Environment.getExternalStorageDirectory().getAbsolutePath()  + "/Test_HAR_data/"  + fileName + "PREDICTION"+".csv";
@@ -210,7 +220,7 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
 
         }
 
-        if(badData>1000) {
+        if(badData>2000) {
             for (int h = 0; h < 12; h++) {
                 dataFile[h] = String.valueOf(inputData[0][h][i][0]);
             }
@@ -323,6 +333,37 @@ public class SaveSensorDataActivity extends AppCompatActivity implements SensorE
                 break;
         }
         return act;
+    }
+
+    private boolean checkPermission() {
+        int result = ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (result == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private void requestPermission() {
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            Toast.makeText(this, "Write External Storage permission allows us to do store images. Please allow this permission in App Settings.", Toast.LENGTH_LONG).show();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_CODE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.e("value", "Permission Granted, Now you can use local drive .");
+                } else {
+                    Log.e("value", "Permission Denied, You cannot use local drive .");
+                }
+                break;
+        }
     }
 
 

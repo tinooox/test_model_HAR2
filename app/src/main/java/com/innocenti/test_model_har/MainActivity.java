@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button realTimeAct = findViewById(R.id.realTimeAct);
 
+
         recordAct.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">test_model_HAR</string>
+    <string name="app_name">Human Signals</string>
     <string name="textview">textview</string>
     <string name="probability">probabilità</string>
     <string name="downstairs">scendi</string>
     <string name="jogging">corsa</string>
     <string name="sitting">seduto</string>
     <string name="upstairs">sali</string>
-    <string name="walking">cammini</string>
+    <string name="walking">camminata</string><string name="register_attitude">ATTITUDE</string>
+    <string name="registered_gravity">GRAVITY</string>
+    <string name="registered_acceleration">ACCELERATION</string>
+    <string name="register_rotation_rate">ROTATION RATE</string>
+    <string name="real_time_activity_button">ATTIVITA\' TEMPO REALE</string>
+    <string name="register_activity_button">REGISTRA I DATI</string>
 </resources>
