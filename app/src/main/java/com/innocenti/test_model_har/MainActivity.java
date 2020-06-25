@@ -20,35 +20,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button recordAct  = findViewById(R.id.recordAct);
-        Button classifyWEKA = findViewById(R.id.classifyWEKA);
-        Button classifyTF = findViewById(R.id.classifyTF);
+
+        Button realTimeAct = findViewById(R.id.realTimeAct);
 
         recordAct.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Log.d(TAG, "onClick: bottone record cliccato");
-                Intent intent = new Intent(MainActivity.this, SensorDataActivity.class);
+                Intent intent = new Intent(MainActivity.this, SaveSensorDataActivity.class);
                 startActivity(intent);
             }
         });
 
-        classifyTF.setOnClickListener(new View.OnClickListener() {
+        realTimeAct.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Log.d(TAG, "onClick: bottone TF cliccato");
-                Intent intent = new Intent(MainActivity.this, RunTimeHar.class);
+                Intent intent = new Intent(MainActivity.this, RunTimeHarActivity.class);
                 startActivity(intent);
             }
         });
 
-        classifyWEKA.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClick: bottone WEKA cliccato");
-                Intent intent = new Intent(MainActivity.this, WekaActivity.class);
-                startActivity(intent);
-            }
-        });
+
 
 
     }

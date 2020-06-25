@@ -4,6 +4,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
@@ -12,6 +13,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -20,11 +22,18 @@ import org.tensorflow.lite.Interpreter;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Locale;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
-public class RunTimeHar extends AppCompatActivity implements SensorEventListener {
+public class RunTimeHarActivity extends AppCompatActivity implements SensorEventListener, TextToSpeech.OnInitListener {
+
+    private static int prevIdx = -1;
 
     private static final String TAG = "RunTimeActivity" ;
     private TextView downstairsTextView;
@@ -43,9 +52,12 @@ public class RunTimeHar extends AppCompatActivity implements SensorEventListener
 
     private SensorManager sensorManager;
     Sensor attitude, gravity, acceleration, rotationRate, accelerometer;
+    String[] labels = {"downstairs", "upstairs", "walking", "jogging", "sitting"};
     private float[][][][] input_data;
     private float[][] output_data;
     int i;
+
+    private TextToSpeech textToSpeech;
 
 
 
@@ -86,6 +98,9 @@ public class RunTimeHar extends AppCompatActivity implements SensorEventListener
         sensorManager.registerListener( this, rotationRate, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener( this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
+        textToSpeech = new TextToSpeech(this, this);
+        textToSpeech.setLanguage(Locale.US);
+
     }
 
 
@@ -99,7 +114,6 @@ public class RunTimeHar extends AppCompatActivity implements SensorEventListener
             input_data[0][0][i][0] = sensorEvent.values[0];
             input_data[0][1][i][0] = sensorEvent.values[1];
             input_data[0][2][i][0] = sensorEvent.values[2];
-            Log.d(TAG, "onSensorChanged: X: " + sensorEvent.values[0]+ " Y: "+ sensorEvent.values[1] + " Z: " + sensorEvent.values[2]);
         }
 
         if(sensor.getType() == Sensor.TYPE_GRAVITY){
@@ -181,12 +195,56 @@ public class RunTimeHar extends AppCompatActivity implements SensorEventListener
         }
     }
 
+    @SuppressLint("SetTextI18n")
     public void setProbabilities(){
-        downstairsTextView.setText(Float.toString(output_data[0][0]));
-        upstairsTextView.setText(Float.toString(output_data[0][1]));
-        walkingTextView.setText(Float.toString(output_data[0][2]));
-        joggingTextView.setText(Float.toString(output_data[0][3]));
-        sittingTextView.setText(Float.toString(output_data[0][4]));
+        downstairsTextView.setText(Float.toString(approssima(output_data[0][0])));
+        upstairsTextView.setText(Float.toString(approssima(output_data[0][1])));
+        walkingTextView.setText(Float.toString(approssima(output_data[0][2])));
+        joggingTextView.setText(Float.toString(approssima(output_data[0][3])));
+        sittingTextView.setText(Float.toString(approssima(output_data[0][4])));
+    }
+
+    public void onInit(int status) {
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public void run() {
+                if (output_data == null || output_data.length == 0) {
+                    return;
+                }
+                float max = -1;
+                int idx = -1;
+                for (int i = 0; i < output_data[0].length; i++) {
+                    if (output_data[0][i] > max) {
+                        idx = i;
+                        max = output_data[0][i];
+                    }
+                }
+
+                if(max > 0.50 && idx != prevIdx) {
+                    textToSpeech.speak(labels[idx], TextToSpeech.QUEUE_ADD, null,
+                            Integer.toString(new Random().nextInt()));
+                    prevIdx = idx;
+                }
+            }
+        }, 1000, 3000);
+    }
+
+    protected void onDestroy(){
+        super.onDestroy();
+        sensorManager.unregisterListener(this);
+    }
+
+    protected void onPause(){
+        super.onPause();
+        sensorManager.unregisterListener(this);
+    }
+
+    private static float approssima(float d) {
+        BigDecimal bd = new BigDecimal(Float.toString(d));
+        bd = bd.setScale(3, BigDecimal.ROUND_HALF_UP);
+        return bd.floatValue();
     }
 
 

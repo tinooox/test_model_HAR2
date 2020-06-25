@@ -18,30 +18,43 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.opencsv.CSVWriter;
+
 import org.tensorflow.lite.Interpreter;
 
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Calendar;
 
 import androidx.annotation.LongDef;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-public class SensorDataActivity extends AppCompatActivity implements SensorEventListener {
-    float[][][][] a = new float[1][12][50][1];
-    float[][][][] b = new float[1][3][50][1];
-    float[][] out = new float[1][5];
-    int i = 0;
-    int j = 0;
-    boolean registered = false;
-    Interpreter tflite;
+public class SaveSensorDataActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = "SensorDataActivity";
+    //variabili per inference
+    float[][][][] inputData = new float[1][12][50][1];
+    float[][] outputData = new float[1][5];
+    Classifier classifier;
+    //componenti per scrittura su file
+    int badData = 0;
+    boolean is_registered = false;
+    CSVWriter writer, writer1;
+    String fileName = "";
+    String[] firstLine = {"attitude.roll", "attitude.pitch", "attitude.jaw", "gravity.x", "gravity.y", "gravity.z", "userAcc.x", "userAcc.y","userAcc.x", "rotationRate.x", "rotationRate.y", "rotationRate.z"};
+    String[] dataFile = new String[12];
+    int i = 0;
+    //variabili sensori
     private SensorManager sensorManager;
     Sensor attitude, gravity, acceleration, rotationRate, accelerometer;
-    Button buttonStart, buttonStop, buttonClassifica;
-
+    //componenti grafici
+    Button buttonStart, buttonStop;
     TextView attitudeX, attitudeY, attitudeZ, result1;
     TextView gravityX, gravityY, gravityZ;
     TextView accelerationX, accelerationY, accelerationZ;
@@ -50,12 +63,13 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        badData = 0;
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_sensor_data2);
+        setContentView(R.layout.activiry_sensor_data);
 
         buttonStart = (Button) findViewById(R.id.buttonStart);
         buttonStop = (Button) findViewById(R.id.buttonStop);
-        buttonClassifica = (Button) findViewById(R.id.classifica);
+
 
         attitudeX = (TextView) findViewById(R.id.attitudeX);
         attitudeY = (TextView) findViewById(R.id.attitudeY);
@@ -70,23 +84,14 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         accelerationZ = (TextView) findViewById(R.id.accelerationZ);
 
         rotationRateX = (TextView) findViewById(R.id.rotationRateX);
-        rotationRateY= (TextView) findViewById(R.id.rotationRateY);
+        rotationRateY = (TextView) findViewById(R.id.rotationRateY);
         rotationRateZ = (TextView) findViewById(R.id.rotationRateZ);
 
         result1 = (TextView) findViewById(R.id.result1);
         counter = (TextView) findViewById(R.id.counter);
         //start();
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        try {
-            tflite = new Interpreter(loadModelFile());
-            Log.d(TAG, "onCreate: modello caricato correttamente");
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, "onCreate: modell non caricato");
-        }
-
-
+        classifier = new Classifier(getApplicationContext());
 
 
 
@@ -94,7 +99,6 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         buttonStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(TAG, "hai registrato " + a.length + "secondi" );
                 onPause();
 
             }
@@ -105,34 +109,23 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             @Override
             public void onClick(View view) {
                 onResume();
-            }
-        });
+                fileName = getData();
+                final String data_csv = android.os.Environment.getExternalStorageDirectory().getAbsolutePath()  + "/Test_HAR_data/"  + fileName + "DATA" +".csv";
+                final String prediciton_csv = android.os.Environment.getExternalStorageDirectory().getAbsolutePath()  + "/Test_HAR_data/"  + fileName + "PREDICTION"+".csv";
 
-        buttonClassifica.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(registered) {
-                    float [][][][] data = createInputData(a);
+                try {
+                    writer = new CSVWriter(new FileWriter(data_csv));
+                    writer1 = new CSVWriter(new FileWriter(prediciton_csv));
+                    Log.d(TAG, "onCreate: file creato ");
+                    writer.writeNext(firstLine);
 
-                    Log.d(TAG, "onClick: passiamo allactivity tensorflow");
-                    Intent intent = new Intent(SensorDataActivity.this, TensorflowActivity.class);
-                    Bundle bundle = new Bundle();
-                    bundle.putSerializable("value", a);
-                    intent.putExtras(bundle);
-                    startActivity(intent);
-
-                }
-                else{
-
-                    Context context = getApplicationContext();
-                    CharSequence text = "ERRORE, devi prima registrare un attività";
-                    int duration = Toast.LENGTH_SHORT;
-
-                    Toast toast = Toast.makeText(context, text, duration);
-                    toast.show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.d(TAG, "onCreate: ERRORE" + e);
                 }
             }
         });
+
 
     }
 
@@ -140,6 +133,14 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(this);
+        if(is_registered){
+            try {
+                writer.close();
+                writer1.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
@@ -150,14 +151,19 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         start();
     }
 
+    protected  void onDestroy(){
+        super.onDestroy();
+
+    }
+
 
 
 
     @SuppressLint("SetTextI18n")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        j++;
-        //counter.setText("a" + j);
+
+
         Sensor sensor = sensorEvent.sensor;
 
 
@@ -167,28 +173,30 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             attitudeX.setText("X: "+ sensorEvent.values[0]);
             attitudeY.setText("Y: "+ sensorEvent.values[1]);
             attitudeZ.setText("Z: "+ sensorEvent.values[2]);
-            a[0][0][i][0] = sensorEvent.values[0];
-            a[0][1][i][0] = sensorEvent.values[1];
-            a[0][2][i][0] = sensorEvent.values[2];
+            inputData[0][0][i][0] = sensorEvent.values[0];
+            inputData[0][1][i][0] = sensorEvent.values[1];
+            inputData[0][2][i][0] = sensorEvent.values[2];
+
+
         }
+
         if(sensor.getType() == Sensor.TYPE_GRAVITY){
             gravityX.setText("X: " + sensorEvent.values[0]/9.81);
             gravityY.setText("Y: " + sensorEvent.values[1]/9.81);
             gravityZ.setText("Z: " + sensorEvent.values[2]/9.81);
-            a[0][3][i][0] = (float) (sensorEvent.values[0]/9.81);
-            a[0][4][i][0] = (float) (sensorEvent.values[0]/9.81);
-            a[0][5][i][0] = (float) (sensorEvent.values[0]/9.81);
-        }
-        if(sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
+            inputData[0][3][i][0] = (float) (sensorEvent.values[0]/9.81);
+            inputData[0][4][i][0] = (float) (sensorEvent.values[0]/9.81);
+            inputData[0][5][i][0] = (float) (sensorEvent.values[0]/9.81);
 
+        }
+
+        if(sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
             accelerationX.setText("X: " + sensorEvent.values[0]);
             accelerationY.setText("Y: " + sensorEvent.values[1]);
             accelerationZ.setText("Z: " + sensorEvent.values[2]);
-
-
-            a[0][6][i][0]= (float) (sensorEvent.values[0]/-9.81);
-            a[0][7][i][0] = (float) (sensorEvent.values[1]/-9.81);
-            a[0][8][i][0] = (float) (sensorEvent.values[2]/-9.81);
+            inputData[0][6][i][0]= (float) (sensorEvent.values[0]/-9.81);
+            inputData[0][7][i][0] = (float) (sensorEvent.values[1]/-9.81);
+            inputData[0][8][i][0] = (float) (sensorEvent.values[2]/-9.81);
 
         }
 
@@ -196,42 +204,39 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
             rotationRateX.setText("X: "+ sensorEvent.values[0]);
             rotationRateY.setText("Y: "+ sensorEvent.values[1]);
             rotationRateZ.setText("Z: "+ sensorEvent.values[2]);
-            a[0][9][i][0] = sensorEvent.values[0];
-            a[0][10][i][0] = sensorEvent.values[1];
-            a[0][11][i][0] = sensorEvent.values[2];
-        }
-
-
-
-        if(sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-
-            float d1 = (float) (sensorEvent.values[0]/9.81);
-            float d2 = (float) (sensorEvent.values[1]/9.81);
-            float d3 = (float) (sensorEvent.values[2]/9.81);
-            b[0][0][i][0] = d1;
-            b[0][1][i][0] = d2;
-            b[0][2][i][0] = d3;
-
+            inputData[0][9][i][0] = sensorEvent.values[0];
+            inputData[0][10][i][0] = sensorEvent.values[1];
+            inputData[0][11][i][0] = sensorEvent.values[2];
 
         }
 
-
-
-        i++;
-
-
-
-        if (i == 50) {
-
-            out = doInference(a);
-            printAct(out);
+        if(badData>1000) {
+            for (int h = 0; h < 12; h++) {
+                dataFile[h] = String.valueOf(inputData[0][h][i][0]);
+            }
+            is_registered = true;
+            writer.writeNext(dataFile);
 
 
 
-            //onPause();
-            i = 0;
-            registered = true;
+            i++;
+
+            if (i == 50) {
+                outputData = classifier.doInference(inputData);
+                //printAct(outputData);
+                String[] act_prob = {getACT(outputData), getProb(outputData)};
+                writer.writeNext(act_prob);
+                writer1.writeNext(act_prob);
+
+                i = 0;
+            }
+
         }
+        Log.d(TAG, "onSensorChanged: bad_data" + badData);
+        badData++;
+
+
+
 
 
 
@@ -255,73 +260,69 @@ public class SensorDataActivity extends AppCompatActivity implements SensorEvent
         rotationRate = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
 
 
-    }
-
-    public float[][][][] createInputData(float[][][][] a){
-        int length = a.length;
-        float[][][][] data = new float[a.length][12][50][1];
-        for(int i = 0; i< a.length; i++){
-            for (int j = 0; j< 12; j++){
-                for (int h = 0; h<50; h++)
-                    data[i][j][h][0] = a[i][j][h][0];
-                }
-            }
-        return data;
-    }
-
-    public float[][] doInference(float[][][][] dati_final) {
-
-        float[][] outputval = new float[1][5];
-        tflite.run(dati_final, outputval);
-        return outputval;
-    }
-
-    private MappedByteBuffer loadModelFile() throws IOException {
-        Log.d(TAG, "loadModelFile: dentro la procedura");
-        AssetFileDescriptor fileDescriptor = this.getAssets().openFd("5_out.tflite");
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        Log.d(TAG, "loadModelFile: fuori la procedura");
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
 
     }
+
+
 
     public void printAct(float[][] prediction){
+       String s = getACT(prediction);
+       result1.setText(s);
+
+    }
+
+    public String getData(){
+        Calendar time = Calendar.getInstance ();
+        int year = time.get (time.YEAR);
+        int month = time.get (time.MONTH) +1;
+        int day = time.get (time.DAY_OF_MONTH);
+        int hour = time.get (time.HOUR_OF_DAY);
+        int minute = time.get (time.MINUTE);
+        int second = time.get (time.SECOND);
+        int ms = time.get (time.MILLISECOND);
+        String nowtime = year + "_" + month + "_" + day + "," + hour + ":" + minute + ":" + second ;
+        return nowtime;
+    }
+
+    public String getProb(float[][] out){
+        float max = 0;
+        for(int i = 0; i<5; i++){
+            if(out[0][i]>max){
+                max = out[0][i];
+            }
+        }
+        return ""+ max;
+
+    }
+
+    public String getACT(float[][] out){
+        String act = "";
         int index = 0;
         float max = 0;
         for(int i = 0; i<5; i++){
-            if(prediction[0][i]>max){
-                max = prediction[0][i];
+            if(out[0][i]>max){
+                max = out[0][i];
                 index = i;
             }
         }
         switch(index){
             case 0:
-                result1.setText("DOWNSTAIRS");
-                counter.setText(""+max);
+                act = "DOWNSTAIRS";
                 break;
-
             case 1:
-                result1.setText("UPSTAIRS" );
-                counter.setText(""+max);
+                act = "UPSTAIRS";
                 break;
-
             case 2:
-                result1.setText("WALKING");
-                counter.setText(""+max);
+                act = "WALKING";
                 break;
             case 3:
-                result1.setText("JOGGING");
-                counter.setText(""+max);
+                act = "JOGGING";
                 break;
             case 4:
-                result1.setText("SITTING");
-                counter.setText(""+max);
+                act = "SITTING";
                 break;
-
         }
+        return act;
     }
 
 

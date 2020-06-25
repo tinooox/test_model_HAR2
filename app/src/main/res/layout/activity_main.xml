@@ -6,28 +6,20 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/classifyTF"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="TENSORFLOW"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.742" />
 
     <Button
-        android:id="@+id/classifyWEKA"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="WEKA"
+        android:id="@+id/realTimeAct"
+        android:layout_width="163dp"
+        android:layout_height="47dp"
+        android:background="@color/colorPrimary"
+        android:text="REAL TIME ACTIVITY"
+        android:textColor="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.503"
+        app:layout_constraintHorizontal_bias="0.935"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.84" />
+        app:layout_constraintVertical_bias="0.976" />
 
     <TextView
         android:id="@+id/textView"
@@ -45,13 +37,16 @@
 
     <Button
         android:id="@+id/recordAct"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="REGISTRA ATTIVITA'"
+        android:layout_width="163dp"
+        android:layout_height="47dp"
+        android:text="REGISTER ACTIVITY"
+        android:background="@color/colorPrimary"
+        android:textColor="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.064"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.641" />
+        app:layout_constraintVertical_bias="0.976" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
